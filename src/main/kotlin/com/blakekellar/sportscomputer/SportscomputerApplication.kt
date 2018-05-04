@@ -40,8 +40,8 @@ class RouterConfig {
     }
 }
 
-data class GameResult(val results: List<TeamScore>)
-data class TeamScore(val team: String, val score: Int)
+data class GameResult(val teamScores: List<TeamScore>)
+data class TeamScore(val team: String, val score: Double)
 
 interface GameResultsHandler {
     fun post(request: ServerRequest): Mono<ServerResponse>
@@ -57,7 +57,6 @@ class GameResultsHandlerImpl(private val srsComputer: SrsComputer) : GameResults
 }
 
 interface SrsComputer {
-    //    fun computeSrs(gameResults: Flux<GameResult>): Mono<Map<*, *>>
     fun computeSrs(gameResults: Flux<GameResult>): Mono<RealVector>
 }
 
@@ -66,17 +65,10 @@ class SrsComputerImpl : SrsComputer {
 
     companion object : KLogging()
 
-    override fun computeSrs(gameResults: Flux<GameResult>): Mono<RealVector> { //Mono<Map<*, *>> {
+    override fun computeSrs(gameResults: Flux<GameResult>): Mono<RealVector> {
 
         /*
         Average point margin by team is the sum of all margins (team score minus opponent score) divided by number of games.
-
-        margin <- 0
-        games <- 0
-        foreach game g played by team n against team o
-            margin += score_n - score_o
-            games++
-        average point margin of team n = margin / games
 
         SRS (n=number of teams, M = team margin, S_n = SRS for team S)
         S_1 = M_1 + (1/n) * (S_2 + .. + S_n)
@@ -88,11 +80,36 @@ class SrsComputerImpl : SrsComputer {
         2. Solve system of equations
          */
 
-//        val teamMargin: MutableMap<String, Double> = mutableMapOf() // Team->Margin
-//        val teamRanking: MutableMap<String, Double> = mutableMapOf() // Team->SRS output
-//        var numTeams = 0
-
         return gameResults.collectList().flatMap { resultsList ->
+
+            val teams: MutableSet<String> = mutableSetOf()
+            val totalPointMargin: MutableMap<String, Double> = mutableMapOf()
+            val totalGamesPlayed: MutableMap<String, Double> = mutableMapOf()
+
+            resultsList.forEach { gameResult ->
+
+                if (gameResult.teamScores.size != 2) {
+                    throw UnsupportedOperationException("Received ${gameResult.teamScores.size} gameResult teamScores, exactly 2 required.")
+                }
+
+                gameResult.teamScores.forEach {
+                    teams.add(it.team)
+                    totalGamesPlayed.putIfAbsent(it.team, 0.0)
+                    totalGamesPlayed[it.team] = totalGamesPlayed[it.team]!!.inc()
+                    totalPointMargin.putIfAbsent(it.team, 0.0)
+                }
+
+                val firstTeamScore = gameResult.teamScores.first()
+                val secondTeamScore = gameResult.teamScores.last()
+                val margin = firstTeamScore.score - secondTeamScore.score
+                totalPointMargin[firstTeamScore.team] = totalPointMargin[firstTeamScore.team]!!.plus(margin)
+                totalPointMargin[secondTeamScore.team] = totalPointMargin[secondTeamScore.team]!!.minus(margin)
+            }
+
+            logger.info("teams=${teams}")
+            logger.info("totalPointMargin=${totalPointMargin}")
+            logger.info("totalGamesPlayed=${totalGamesPlayed}")
+
             val matrixData = arrayOf(doubleArrayOf(1.0, 2.0, 3.0), doubleArrayOf(2.0, 5.0, 3.0), doubleArrayOf(2.0, -5.0, 4.0))
             val coefficients = MatrixUtils.createRealMatrix(matrixData)
             val solver = LUDecomposition(coefficients).solver
