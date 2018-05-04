@@ -96,7 +96,7 @@ class SrsComputerImpl : SrsComputer {
                 totalPointMargin[firstTeamScore.team] = totalPointMargin[firstTeamScore.team]!!.plus(margin)
                 totalPointMargin[secondTeamScore.team] = totalPointMargin[secondTeamScore.team]!!.minus(margin)
                 opponents.put(firstTeamScore.team, opponents.get(firstTeamScore.team)!!.plus(secondTeamScore.team))
-                val foo = opponents.put(secondTeamScore.team, opponents[secondTeamScore.team]!!.plus(firstTeamScore.team))
+                opponents.put(secondTeamScore.team, opponents[secondTeamScore.team]!!.plus(firstTeamScore.team))
             }
 
             logger.info("teams=${teams}")
@@ -118,13 +118,13 @@ S_2 = M_2 + (1/n) * (S_1 + .. + S_n)
 S_n = M_n + (1/n) * (S_1 + .. + S_n-1)
  */
 
-            //  TODO: LIST
-            var constantsArray: Array<Double> = emptyArray()
+            val constantsArray: MutableList<Double> = mutableListOf()
             teams.forEach { team ->
-                constantsArray = constantsArray.plus(totalPointMargin[team]!! / totalGamesPlayed[team]!!)
+                constantsArray.add(totalPointMargin[team]!! / totalGamesPlayed[team]!!)
             }
             val constants = ArrayRealVector(constantsArray.toDoubleArray(), false)
 
+            
             var matrixData: Array<DoubleArray> = emptyArray()
             teams.forEach { team ->
                 //  TODO: LIST
