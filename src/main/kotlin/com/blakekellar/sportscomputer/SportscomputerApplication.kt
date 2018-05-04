@@ -67,24 +67,14 @@ class SrsComputerImpl : SrsComputer {
 
     override fun computeSrs(gameResults: Flux<GameResult>): Mono<RealVector> {
 
-        /*
-        Average point margin by team is the sum of all margins (team score minus opponent score) divided by number of games.
-
-        SRS (n=number of teams, M = team margin, S_n = SRS for team S)
-        S_1 = M_1 + (1/n) * (S_2 + .. + S_n)
-        S_2 = M_2 + (1/n) * (S_1 + .. + S_n)
-        ...
-        S_n = M_n + (1/n) * (S_1 + .. + S_n-1)
-
-        1. Compute margin
-        2. Solve system of equations
-         */
-
         return gameResults.collectList().flatMap { resultsList ->
+
+            // Average point margin by team is the sum of all margins (team score minus opponent score) divided by number of games.
 
             val teams: MutableSet<String> = mutableSetOf()
             val totalPointMargin: MutableMap<String, Double> = mutableMapOf()
             val totalGamesPlayed: MutableMap<String, Double> = mutableMapOf()
+            val opponents: MutableMap<String, Set<String>> = mutableMapOf()
 
             resultsList.forEach { gameResult ->
 
@@ -97,6 +87,7 @@ class SrsComputerImpl : SrsComputer {
                     totalGamesPlayed.putIfAbsent(it.team, 0.0)
                     totalGamesPlayed[it.team] = totalGamesPlayed[it.team]!!.inc()
                     totalPointMargin.putIfAbsent(it.team, 0.0)
+                    opponents.putIfAbsent(it.team, setOf())
                 }
 
                 val firstTeamScore = gameResult.teamScores.first()
@@ -104,16 +95,54 @@ class SrsComputerImpl : SrsComputer {
                 val margin = firstTeamScore.score - secondTeamScore.score
                 totalPointMargin[firstTeamScore.team] = totalPointMargin[firstTeamScore.team]!!.plus(margin)
                 totalPointMargin[secondTeamScore.team] = totalPointMargin[secondTeamScore.team]!!.minus(margin)
+                opponents.put(firstTeamScore.team, opponents.get(firstTeamScore.team)!!.plus(secondTeamScore.team))
+                val foo = opponents.put(secondTeamScore.team, opponents[secondTeamScore.team]!!.plus(firstTeamScore.team))
             }
 
             logger.info("teams=${teams}")
             logger.info("totalPointMargin=${totalPointMargin}")
             logger.info("totalGamesPlayed=${totalGamesPlayed}")
+            logger.info("opponents=${opponents}")
 
-            val matrixData = arrayOf(doubleArrayOf(1.0, 2.0, 3.0), doubleArrayOf(2.0, 5.0, 3.0), doubleArrayOf(2.0, -5.0, 4.0))
+            // initial state of solution (LHS) is average point margin
+            // initial state of coefficient matrix is
+            //  -1 for a team vs itself
+            //  0 if team has not played other team
+            //  1 divided by number of team's opponents
+
+/*
+SRS (n=number of teams, M = team margin, S_n = SRS for team S)
+S_1 = M_1 + (1/n) * (S_2 + .. + S_n)
+S_2 = M_2 + (1/n) * (S_1 + .. + S_n)
+...
+S_n = M_n + (1/n) * (S_1 + .. + S_n-1)
+ */
+
+            //  TODO: LIST
+            var constantsArray: Array<Double> = emptyArray()
+            teams.forEach { team ->
+                constantsArray = constantsArray.plus(totalPointMargin[team]!! / totalGamesPlayed[team]!!)
+            }
+            val constants = ArrayRealVector(constantsArray.toDoubleArray(), false)
+
+            var matrixData: Array<DoubleArray> = emptyArray()
+            teams.forEach { team ->
+                //  TODO: LIST
+                var singleTeamArray: DoubleArray = doubleArrayOf()
+                teams.forEach { opponent ->
+                    if (team == opponent) {
+                        singleTeamArray = singleTeamArray.plus(0.0)
+                    } else if (opponents[team]!!.contains(opponent)) {
+                        singleTeamArray = singleTeamArray.plus(1.0 / opponents[team]!!.size)
+                    } else {
+                        singleTeamArray = singleTeamArray.plus(0.0)
+                    }
+                }
+                matrixData = matrixData.plus(singleTeamArray)
+            }
+
             val coefficients = MatrixUtils.createRealMatrix(matrixData)
             val solver = LUDecomposition(coefficients).solver
-            val constants = ArrayRealVector(doubleArrayOf(1.0, -2.0, 1.0), false)
             val solution = solver.solve(constants)
             Mono.just(solution)
         }
