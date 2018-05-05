@@ -4,7 +4,6 @@ import mu.KLogging
 import org.apache.commons.math3.linear.ArrayRealVector
 import org.apache.commons.math3.linear.LUDecomposition
 import org.apache.commons.math3.linear.MatrixUtils
-import org.apache.commons.math3.linear.RealVector
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -42,6 +41,7 @@ class RouterConfig {
 
 data class GameResult(val teamScores: List<TeamScore>)
 data class TeamScore(val team: String, val score: Double)
+data class TeamRank(val team: String, val rank: Double)
 
 interface GameResultsHandler {
     fun post(request: ServerRequest): Mono<ServerResponse>
@@ -52,12 +52,12 @@ class GameResultsHandlerImpl(private val srsComputer: SrsComputer) : GameResults
     override fun post(request: ServerRequest): Mono<ServerResponse> {
         val gameResults = request.bodyToFlux(GameResult::class.java)
         val result = srsComputer.computeSrs(gameResults)
-        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result, RealVector::class.java)
+        return ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(result)
     }
 }
 
 interface SrsComputer {
-    fun computeSrs(gameResults: Flux<GameResult>): Mono<RealVector>
+    fun computeSrs(gameResults: Flux<GameResult>): Mono<MutableList<TeamRank>>
 }
 
 @Service
@@ -65,7 +65,7 @@ class SrsComputerImpl : SrsComputer {
 
     companion object : KLogging()
 
-    override fun computeSrs(gameResults: Flux<GameResult>): Mono<RealVector> {
+    override fun computeSrs(gameResults: Flux<GameResult>): Mono<MutableList<TeamRank>> {
 
         return gameResults.collectList().flatMap { resultsList ->
 
@@ -120,31 +120,38 @@ S_n = M_n + (1/n) * (S_1 + .. + S_n-1)
 
             val constantsArray: MutableList<Double> = mutableListOf()
             teams.forEach { team ->
-                constantsArray.add(totalPointMargin[team]!! / totalGamesPlayed[team]!!)
+                constantsArray.add(-totalPointMargin[team]!! / totalGamesPlayed[team]!!)
             }
             val constants = ArrayRealVector(constantsArray.toDoubleArray(), false)
 
-            
-            var matrixData: Array<DoubleArray> = emptyArray()
+            var matrixData: Array<DoubleArray> = arrayOf()
             teams.forEach { team ->
-                //  TODO: LIST
-                var singleTeamArray: DoubleArray = doubleArrayOf()
+                val singleTeamArray: MutableList<Double> = mutableListOf()
                 teams.forEach { opponent ->
                     if (team == opponent) {
-                        singleTeamArray = singleTeamArray.plus(0.0)
+                        singleTeamArray.add(0.0)
                     } else if (opponents[team]!!.contains(opponent)) {
-                        singleTeamArray = singleTeamArray.plus(1.0 / opponents[team]!!.size)
+                        singleTeamArray.add(1.0 / opponents[team]!!.size)
                     } else {
-                        singleTeamArray = singleTeamArray.plus(0.0)
+                        singleTeamArray.add(0.0)
                     }
                 }
-                matrixData = matrixData.plus(singleTeamArray)
+                matrixData = matrixData.plus(singleTeamArray.toDoubleArray())
             }
 
             val coefficients = MatrixUtils.createRealMatrix(matrixData)
             val solver = LUDecomposition(coefficients).solver
             val solution = solver.solve(constants)
-            Mono.just(solution)
+
+            val result: MutableList<TeamRank> = mutableListOf()
+
+            var i = 0
+            teams.forEach { team ->
+                result.add(TeamRank(team, solution.getEntry(i)))
+                i++
+            }
+
+            Mono.just(result)
         }
     }
 }

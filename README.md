@@ -1,4 +1,23 @@
 # sports-computer-api
 
-curl localhost:8080/gameresults -d '[{"results":[{"team":"foo","score":42},{"team":"bar","score":1337}]},{"results":[{"team":"baz","score":43},{"team":"quux","score":1338}]}]' -H "Content-type: application/json"
-
+```
+curl -v localhost:8080/gameresults -d '[ {"teamScores":[{"team":"a","score":1.0},{"team":"b","score":2.0}] },{"teamScores":[{"team":"a","score":3.0},{"team":"b","score":1.0}] } ]' -H "Content-type: application/json"
+*   Trying ::1...
+* TCP_NODELAY set
+* Connected to localhost (::1) port 8080 (#0)
+> POST /gameresults HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/7.52.1
+> Accept: */*
+> Content-type: application/json
+> Content-Length: 139
+>
+* upload completely sent off: 139 out of 139 bytes
+< HTTP/1.1 200 OK
+< transfer-encoding: chunked
+< Content-Type: application/json
+<
+* Curl_http_done: called premature == 0
+* Connection #0 to host localhost left intact
+[{"team":"a","rank":0.5},{"team":"b","rank":-0.5}]
+```
