@@ -12,6 +12,7 @@ import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.body
 import org.springframework.test.web.reactive.server.returnResult
+import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Flux
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -25,7 +26,7 @@ class SportscomputerApplicationTests {
     companion object : KLogging()
 
     @Autowired private lateinit var webClient: WebTestClient
-    /
+
     @Test
     fun emptyPostBodyIsBadRequest() {
         this.webClient.post().uri("/gameresults").exchange().expectStatus().isBadRequest
@@ -230,7 +231,7 @@ class SportscomputerApplicationTests {
             postBody = postBody.concatWith(Flux.just(gameResult))
         }
 
-        this.webClient.post().uri("/gameresults").body(postBody).exchange().returnResult(String::class.java).responseBody.subscribe({ a -> println("a=" + a) })
+this.webClient.post().uri("/gameresults").body(postBody).exchange().returnResult(String::class.java).responseBody.subscribe({ a -> println("a="+a)})
     }
 
 }
