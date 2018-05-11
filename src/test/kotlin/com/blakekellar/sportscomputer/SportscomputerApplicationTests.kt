@@ -3,7 +3,6 @@ package com.blakekellar.sportscomputer
 import com.blakekellar.sportscomputer.model.GameResult
 import com.blakekellar.sportscomputer.model.TeamScore
 import mu.KLogging
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired
@@ -12,12 +11,10 @@ import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.body
 import org.springframework.test.web.reactive.server.returnResult
-import org.springframework.web.reactive.function.client.WebClient
 import reactor.core.publisher.Flux
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-
 
 @RunWith(SpringRunner::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -68,7 +65,7 @@ class SportscomputerApplicationTests {
         var postBody: Flux<GameResult> = Flux.empty()
         postBody = postBody.concatWith(gameResultFluxFactory("team1", 1.0, "team2", 2.0))
         postBody = postBody.concatWith(gameResultFluxFactory("team1", 1.0, "team2", 3.0))
-        this.webClient.post().uri("/gameresults").body(postBody).exchange().expectStatus().isOk.expectBody().json("[{\"team\":\"team1\",\"rank\":-1.5},{\"team\":\"team2\",\"rank\":1.5}]\n")
+        this.webClient.post().uri("/gameresults").body(postBody).exchange().expectStatus().isOk.expectBody().json("[{\"team\":\"team1\",\"rank\":-1.0},{\"team\":\"team2\",\"rank\":1.0}]\n")
     }
 
     val random = Random()
@@ -114,7 +111,6 @@ class SportscomputerApplicationTests {
     }
 
     @Test
-    @Ignore // TODO:  Fails with org.apache.commons.math3.linear.SingularMatrixException: matrix is singular
     fun computesSrsForSmallRequest() {
         val gameResults: MutableList<GameResult> = mutableListOf()
 
@@ -137,15 +133,10 @@ class SportscomputerApplicationTests {
 
         val response = this.webClient.post().uri("/gameresults").body(postBody).exchange()
         response.expectStatus().isOk
-        response.returnResult<String>().responseBody.subscribe({
-
-            logger.info("response=${response.returnResult<String>()}")
-        })
-        Thread.sleep(1000)
+//        response.expectBody().json("")
     }
 
     @Test
-    @Ignore // TODO:  Fails with org.apache.commons.math3.linear.SingularMatrixException: matrix is singular
     fun computesSrsKnownResult() {
 
         //https://codeandfootball.wordpress.com/2011/04/12/issues-with-the-simple-ranking-system/
@@ -190,6 +181,9 @@ class SportscomputerApplicationTests {
 
         val response = this.webClient.post().uri("/gameresults").body(postBody).exchange()
         response.expectStatus().isOk
+//        response.expectBody().isEmpty
+        //[{"team":"A","rank":4.782747095336623},{"team":"B","rank":-7.755371637752667},{"team":"C","rank":-4.004774789113481},{"team":"D","rank":0.36968804711125286},{"team":"E","rank":-1.1303119528887473},{"team":"F","rank":9.934903708419544}]
+
 
         /*
         Expected:
@@ -205,23 +199,15 @@ class SportscomputerApplicationTests {
     }
 
     @Test
-    fun foo() {
+    fun mlb2017() {
         val path = Paths.get(javaClass.classLoader.getResource("2017.csv")!!.toURI())
         val gameResults: MutableList<GameResult> = mutableListOf()
         val lines = Files.lines(path)
 
-        var count = 0
         lines.forEach { line ->
-            count++
-
-            if (count < 201) {
-                // TODO: RFC4180 parser e.g. jackson
-                var teamScoreTeamScore = line.split(',')
-                val gameResult = gameResultFactory(teamScoreTeamScore[0], teamScoreTeamScore[1].toDouble(), teamScoreTeamScore[2], teamScoreTeamScore[3].toDouble())
-                logger.info("Adding " + gameResult)
-                gameResults.add(gameResult)
-
-            }
+            val teamScoreTeamScore = line.split(',') // TODO: RFC4180 parser e.g. jackson
+            val gameResult = gameResultFactory(teamScoreTeamScore[0], teamScoreTeamScore[1].toDouble(), teamScoreTeamScore[2], teamScoreTeamScore[3].toDouble())
+            gameResults.add(gameResult)
         }
 
         logger.info("request=${gameResults}")
@@ -231,7 +217,9 @@ class SportscomputerApplicationTests {
             postBody = postBody.concatWith(Flux.just(gameResult))
         }
 
-this.webClient.post().uri("/gameresults").body(postBody).exchange().returnResult(String::class.java).responseBody.subscribe({ a -> println("a="+a)})
+        val response = this.webClient.post().uri("/gameresults").body(postBody).exchange()
+        response.expectStatus().isOk
+        response.expectBody().json("[{\"team\":\"San Francisco Giants\",\"rank\":-0.8529051285945617},{\"team\":\"Arizona D'Backs\",\"rank\":0.87803953390723},{\"team\":\"Chicago Cubs\",\"rank\":0.5954896415957698},{\"team\":\"St. Louis Cardinals\",\"rank\":0.33847549359069234},{\"team\":\"New York Yankees\",\"rank\":1.1741323733785292},{\"team\":\"Tampa Bay Rays\",\"rank\":-0.060398396751359676},{\"team\":\"Toronto Blue Jays\",\"rank\":-0.5590433832012243},{\"team\":\"Baltimore Orioles\",\"rank\":-0.5931607016920941},{\"team\":\"Pittsburgh Pirates\",\"rank\":-0.39424808364508007},{\"team\":\"Boston Red Sox\",\"rank\":0.6638624318556164},{\"team\":\"Philadelphia Phillies\",\"rank\":-0.5639959712135538},{\"team\":\"Cincinnati Reds\",\"rank\":-0.7042627706703027},{\"team\":\"Seattle Mariners\",\"rank\":-0.13820175932169734},{\"team\":\"Houston Astros\",\"rank\":1.1115971734543253},{\"team\":\"San Diego Padres\",\"rank\":-1.3104103980917012},{\"team\":\"Los Angeles Dodgers\",\"rank\":1.2283185772851044},{\"team\":\"Colorado Rockies\",\"rank\":0.38038294652275223},{\"team\":\"Milwaukee Brewers\",\"rank\":0.21384639710901335},{\"team\":\"Kansas City Royals\",\"rank\":-0.5396219482347184},{\"team\":\"Minnesota Twins\",\"rank\":0.1458353252515807},{\"team\":\"Atlanta Braves\",\"rank\":-0.5530935529010194},{\"team\":\"New York Mets\",\"rank\":-0.7817243764802849},{\"team\":\"Los Angeles Angels\",\"rank\":0.008104594241261892},{\"team\":\"Oakland Athletics\",\"rank\":-0.544540949966589},{\"team\":\"Cleveland Indians\",\"rank\":1.4940409772230945},{\"team\":\"Texas Rangers\",\"rank\":-0.11789987800031361},{\"team\":\"Miami Marlins\",\"rank\":-0.27396076157310584},{\"team\":\"Washington Nationals\",\"rank\":0.8857835330871605},{\"team\":\"Detroit Tigers\",\"rank\":-0.9735650376656129},{\"team\":\"Chicago White Sox\",\"rank\":-0.691419407449411}]\n")
     }
 
 }
