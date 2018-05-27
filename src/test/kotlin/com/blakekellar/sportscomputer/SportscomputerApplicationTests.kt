@@ -2,6 +2,9 @@ package com.blakekellar.sportscomputer
 
 import com.blakekellar.sportscomputer.model.GameResult
 import com.blakekellar.sportscomputer.model.TeamScore
+import com.fasterxml.jackson.databind.MappingIterator
+import com.fasterxml.jackson.dataformat.csv.CsvMapper
+import com.fasterxml.jackson.dataformat.csv.CsvSchema
 import com.github.dreamhead.moco.Moco.*
 import com.github.dreamhead.moco.RequestMatcher
 import com.github.dreamhead.moco.Runner.runner
@@ -195,13 +198,20 @@ class SportscomputerApplicationTests {
 
     @Test
     fun mlb2017fromFile() {
-        val path = Paths.get(javaClass.classLoader.getResource("2017.api.regular.csv")!!.toURI())
-        val gameResults: MutableList<GameResult> = mutableListOf()
-        val lines = Files.lines(path)
 
-        lines.forEach { line ->
-            val teamScoreTeamScore = line.split(',') // TODO: RFC4180 parser e.g. jackson
-            val gameResult = gameResultFactory(teamScoreTeamScore[0], teamScoreTeamScore[1].toDouble(), teamScoreTeamScore[2], teamScoreTeamScore[3].toDouble())
+        val mapper = CsvMapper()
+        val path = Paths.get(javaClass.classLoader.getResource("2017.api.regular.csv")!!.toURI())
+        val schema = CsvSchema.emptySchema().withHeader()
+        val iterator: MappingIterator<Map<String, String>> = mapper.readerFor(Map::class.java).with(schema).readValues(Files.newBufferedReader(path))
+
+        val gameResults: MutableList<GameResult> = mutableListOf()
+
+        while (iterator.hasNext()) {
+            val rowAsMap = iterator.next()
+            val gameResult = gameResultFactory(rowAsMap.get("team1name")!!,
+                    rowAsMap.get("team1score").toString().toDouble(),
+                    rowAsMap.get("team2name")!!,
+                    rowAsMap.get("team2score").toString().toDouble())
             gameResults.add(gameResult)
         }
 

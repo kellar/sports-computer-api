@@ -54,6 +54,9 @@ dependencies {
     compile("org.jetbrains.kotlin:kotlin-reflect")
     compile 'io.github.microutils:kotlin-logging:1.4.9'
     compile group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+
+    compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-csv', version: '2.9.5'
+    //compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformats-text', version: '2.9.5', ext: 'pom'
     testCompile('org.springframework.boot:spring-boot-starter-test')
     testCompile('de.flapdoodle.embed:de.flapdoodle.embed.mongo')
     testCompile('io.projectreactor:reactor-test')
