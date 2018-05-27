@@ -2,11 +2,17 @@ package com.blakekellar.sportscomputer
 
 import com.blakekellar.sportscomputer.model.GameResult
 import com.blakekellar.sportscomputer.model.TeamScore
+import com.github.dreamhead.moco.Moco.*
+import com.github.dreamhead.moco.RequestMatcher
+import com.github.dreamhead.moco.Runner.runner
 import mu.KLogging
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.body
@@ -18,12 +24,28 @@ import java.util.*
 
 @RunWith(SpringRunner::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestPropertySource(locations = ["classpath:application-integration-test.properties"])
 class SportscomputerApplicationTests {
 
     companion object : KLogging()
 
     @Autowired
     private lateinit var webClient: WebTestClient
+    private lateinit var runner: com.github.dreamhead.moco.Runner
+
+    @Before
+    fun startMlbApiMock() {
+        val server = httpServer(12306)
+        server.get(RequestMatcher.ANY_REQUEST_MATCHER).response(with(file("src/test/resources/mlbapi2017.json")), header("Content-Type", "application/json"))
+        runner = runner(server)
+        runner.start()
+        logger.info("Got here 1234")
+    }
+
+    @After
+    fun stopMlbApiMock() {
+        runner.stop()
+    }
 
     @Test
     fun emptyPostBodyIsBadRequest() {

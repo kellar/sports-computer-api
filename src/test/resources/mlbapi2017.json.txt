@@ -1,0 +1,1 @@
+curl -vks "http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&season=2017&startDate=2017-01-01&endDate=2017-12-31"
