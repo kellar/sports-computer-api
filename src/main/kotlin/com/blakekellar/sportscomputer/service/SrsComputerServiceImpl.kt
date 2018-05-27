@@ -101,6 +101,7 @@ class SrsComputerServiceImpl : SrsComputerService {
                 result.add(TeamRank(team, solution.getEntry(i)))
                 i++
             }
+            result.sortBy { it.rank * -1.0 }
 
             Mono.just(result)
         }
