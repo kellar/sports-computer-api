@@ -102,7 +102,9 @@ enum class DetailedState {
     @JsonProperty("Scheduled")
     SCHEDULED,
     @JsonProperty("Pre-Game")
-    PREGAME
+    PREGAME,
+    @JsonProperty("Game Over")
+    GAMEOVER
 }
 
 data class Status(

@@ -15,8 +15,6 @@ class MlbGamesServiceImpl(
     companion object : KLogging()
 
     override fun getMlbGames(season: Int): Mono<MlbGames> {
-        //http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&season=2018&startDate=2018-01-01&endDate=2018-12-31"
-        // TODO: application.properties value
         val webClient = WebClient.builder().baseUrl(computerConfiguration.mlbApiBaseUri).build()
         return webClient
                 .get()

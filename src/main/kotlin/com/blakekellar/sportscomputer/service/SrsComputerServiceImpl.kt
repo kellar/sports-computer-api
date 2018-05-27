@@ -56,8 +56,8 @@ class SrsComputerServiceImpl : SrsComputerService {
                 val margin = firstTeamScore.score - secondTeamScore.score
                 totalPointMargin[firstTeamScore.team] = totalPointMargin[firstTeamScore.team]!!.plus(margin)
                 totalPointMargin[secondTeamScore.team] = totalPointMargin[secondTeamScore.team]!!.minus(margin)
-                opponents.put(firstTeamScore.team, opponents[firstTeamScore.team]!!.plus(secondTeamScore.team))
-                opponents.put(secondTeamScore.team, opponents[secondTeamScore.team]!!.plus(firstTeamScore.team))
+                opponents[firstTeamScore.team] = opponents[firstTeamScore.team]!!.plus(secondTeamScore.team)
+                opponents[secondTeamScore.team] = opponents[secondTeamScore.team]!!.plus(firstTeamScore.team)
             }
 
             logger.debug("teams=${teams}")

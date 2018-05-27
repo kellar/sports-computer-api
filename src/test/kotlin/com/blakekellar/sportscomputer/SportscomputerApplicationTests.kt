@@ -16,7 +16,6 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.body
-import org.springframework.test.web.reactive.server.returnResult
 import reactor.core.publisher.Flux
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -39,7 +38,6 @@ class SportscomputerApplicationTests {
         server.get(RequestMatcher.ANY_REQUEST_MATCHER).response(with(file("src/test/resources/mlbapi2017.json")), header("Content-Type", "application/json"))
         runner = runner(server)
         runner.start()
-        logger.info("Got here 1234")
     }
 
     @After
@@ -147,8 +145,6 @@ class SportscomputerApplicationTests {
             gameResults.add(gameResultFactory("team" + team1, team1score, "team" + team2, team2score))
         }
 
-        logger.info("request=${gameResults}")
-
         var postBody: Flux<GameResult> = Flux.empty()
         gameResults.forEach { gameResult ->
             postBody = postBody.concatWith(Flux.just(gameResult))
@@ -177,8 +173,6 @@ class SportscomputerApplicationTests {
         gameResults.add(gameResultFactory("D", 7.0, "F", 17.0))
         gameResults.add(gameResultFactory("E", 30.0, "F", 41.0))
 
-        logger.info("request=${gameResults}")
-
         var postBody: Flux<GameResult> = Flux.empty()
         gameResults.forEach { gameResult ->
             postBody = postBody.concatWith(Flux.just(gameResult))
@@ -188,7 +182,7 @@ class SportscomputerApplicationTests {
         response.expectStatus().is5xxServerError
 
         /*
-        Matrix is singular. Better methods produce:
+        TODO: Matrix is singular. Better methods produce:
 
         A 2.93
         B -7.19
@@ -197,8 +191,6 @@ class SportscomputerApplicationTests {
         E -3.07
         F 7.18
          */
-
-        logger.info("response=${response.returnResult<String>()}")
     }
 
     @Test
@@ -213,8 +205,6 @@ class SportscomputerApplicationTests {
             gameResults.add(gameResult)
         }
 
-        logger.info("request=${gameResults}")
-
         var postBody: Flux<GameResult> = Flux.empty()
         gameResults.forEach { gameResult ->
             postBody = postBody.concatWith(Flux.just(gameResult))
@@ -226,7 +216,6 @@ class SportscomputerApplicationTests {
     }
 
     @Test
-    // TODO: Stub (Moco) MLB API
     fun mlb2017fromApi() {
         val response = this.webClient.get().uri("/mlb/2017/srs").exchange()
         response.expectStatus().isOk
