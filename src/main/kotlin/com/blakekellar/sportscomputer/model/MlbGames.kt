@@ -104,7 +104,9 @@ enum class DetailedState {
     @JsonProperty("Pre-Game")
     PREGAME,
     @JsonProperty("Game Over")
-    GAMEOVER
+    GAMEOVER,
+    @JsonProperty("Warmup")
+    WARMUP
 }
 
 data class Status(

@@ -1,6 +1,7 @@
 package com.blakekellar.sportscomputer
 
 import com.blakekellar.sportscomputer.model.GameResult
+import com.blakekellar.sportscomputer.model.TeamRank
 import com.blakekellar.sportscomputer.model.TeamScore
 import com.fasterxml.jackson.databind.MappingIterator
 import com.fasterxml.jackson.dataformat.csv.CsvMapper
@@ -15,14 +16,20 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.web.server.LocalServerPort
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.junit4.SpringRunner
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.test.web.reactive.server.body
+import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.body
+import org.springframework.web.reactive.function.client.toEntityList
 import reactor.core.publisher.Flux
+import java.io.FileWriter
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
+
 
 @RunWith(SpringRunner::class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -34,6 +41,9 @@ class SportscomputerApplicationTests {
     @Autowired
     private lateinit var webClient: WebTestClient
     private lateinit var runner: com.github.dreamhead.moco.Runner
+
+    @LocalServerPort
+    var randomServerPort: Int = 0
 
     @Before
     fun startMlbApiMock() {
@@ -231,5 +241,73 @@ class SportscomputerApplicationTests {
         response.expectStatus().isOk
         response.expectBody().json("[{\"team\":\"Cleveland Indians\",\"rank\":1.5602942526545245},{\"team\":\"New York Yankees\",\"rank\":1.2156233964319583},{\"team\":\"Houston Astros\",\"rank\":1.204660978849869},{\"team\":\"Los Angeles Dodgers\",\"rank\":1.158634922327715},{\"team\":\"Arizona Diamondbacks\",\"rank\":0.9389721701446376},{\"team\":\"Washington Nationals\",\"rank\":0.8965363059328156},{\"team\":\"Chicago Cubs\",\"rank\":0.7751881142939342},{\"team\":\"Boston Red Sox\",\"rank\":0.7200271904698983},{\"team\":\"Colorado Rockies\",\"rank\":0.4031395895966099},{\"team\":\"St. Louis Cardinals\",\"rank\":0.34052987882269026},{\"team\":\"Milwaukee Brewers\",\"rank\":0.21605682853663186},{\"team\":\"Minnesota Twins\",\"rank\":0.1732873270297123},{\"team\":\"Los Angeles Angels\",\"rank\":0.009689584691483392},{\"team\":\"Tampa Bay Rays\",\"rank\":-0.05733655538978248},{\"team\":\"Texas Rangers\",\"rank\":-0.11587500428773971},{\"team\":\"Seattle Mariners\",\"rank\":-0.13604965047864603},{\"team\":\"Miami Marlins\",\"rank\":-0.2719370454673652},{\"team\":\"Pittsburgh Pirates\",\"rank\":-0.39219369841308194},{\"team\":\"Kansas City Royals\",\"rank\":-0.5376054763427656},{\"team\":\"Oakland Athletics\",\"rank\":-0.5425160762540148},{\"team\":\"Toronto Blue Jays\",\"rank\":-0.5498463415987557},{\"team\":\"Atlanta Braves\",\"rank\":-0.5510321975299965},{\"team\":\"Philadelphia Phillies\",\"rank\":-0.5616464703393914},{\"team\":\"Baltimore Orioles\",\"rank\":-0.5961802771603336},{\"team\":\"Chicago White Sox\",\"rank\":-0.6883130945300585},{\"team\":\"Cincinnati Reds\",\"rank\":-0.7018142946190437},{\"team\":\"New York Mets\",\"rank\":-0.7794648985236733},{\"team\":\"San Francisco Giants\",\"rank\":-0.8508878117885151},{\"team\":\"Detroit Tigers\",\"rank\":-0.9715485657736599},{\"team\":\"San Diego Padres\",\"rank\":-1.3083930812856541}]\n")
     }
-}
 
+/*  @Test
+    fun mlb2017trend() {
+
+        val mapper = CsvMapper()
+        val path = Paths.get(javaClass.classLoader.getResource("2017.api.regular.csv")!!.toURI())
+        val schema = CsvSchema.emptySchema().withHeader()
+        val iterator: MappingIterator<Map<String, String>> = mapper.readerFor(Map::class.java).with(schema).readValues(Files.newBufferedReader(path))
+
+        val gameResults: MutableList<GameResult> = mutableListOf()
+
+        while (iterator.hasNext()) {
+            val rowAsMap = iterator.next()
+            val gameResult = gameResultFactory(rowAsMap.get("team1name")!!,
+                    rowAsMap.get("team1score").toString().toDouble(),
+                    rowAsMap.get("team2name")!!,
+                    rowAsMap.get("team2score").toString().toDouble())
+            gameResults.add(gameResult)
+        }
+
+        val csv: MutableList<Map<String, String>> = mutableListOf()
+        val keys: MutableSet<String> = mutableSetOf()
+        val lastSrsByTeam: MutableMap<String, String> = mutableMapOf()
+        for (i in 1 until gameResults.size) {
+
+            var postBody: Flux<GameResult> = Flux.empty()
+
+            var j = 0
+
+            gameResults.forEach { gameResult ->
+                if (j <= i) {
+                    postBody = postBody.concatWith(Flux.just(gameResult))
+                }
+                j++
+            }
+
+            try {
+                val webClient2 = WebClient.builder().baseUrl("http://localhost:" + randomServerPort).build()
+                val response = webClient2.post().uri("/gameresults").body(postBody).exchange()
+                val r = response.block()!!.toEntityList<TeamRank>().block()!!.body!!
+
+                val row: MutableMap<String, String> = mutableMapOf()
+                row["game"] = i.toString()
+                keys.add("game")
+                r.forEach { rank ->
+                    if (lastSrsByTeam[rank.team] != rank.rank.toString()) {
+                        row[rank.team] = rank.rank.toString()
+                        keys.add(rank.team)
+                    }
+                    lastSrsByTeam[rank.team] = rank.rank.toString()
+                }
+
+                csv.add(row)
+            } catch (e: Exception) {
+
+            }
+        }
+
+        val schema1 = CsvSchema.builder().setUseHeader(true)
+        keys.forEach { it ->
+            schema1.addColumn(it)
+        }
+        val schema2 = schema1.build()
+        val mapper2 = CsvMapper()
+        val fw = FileWriter("foo.csv")
+        mapper2.writer(schema2).writeValue(fw, csv)
+        fw.close()
+    }
+*/
+}
